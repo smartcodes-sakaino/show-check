@@ -121,6 +121,12 @@ export interface GiftMasterEntry {
   point: number;
   /** ギフト画像URL */
   image: string;
+  /**
+   * true = 無料ギフト種別（ギフトマスタ上の分類。gift_type:2と1:1で対応）。
+   * WSイベント側の `gt`（1=無料/2=有料）は実際には無料ギフトでも2になるケースが
+   * 確認されており信用できないため、無料/有料の判定はこちらを正とする。
+   */
+  free: boolean;
 }
 
 /**
@@ -146,6 +152,7 @@ export async function fetchGiftCatalog(roomId: string): Promise<Map<number, Gift
       name: typeof item.gift_name === "string" ? item.gift_name : `Gift ${giftId}`,
       point: Number(item?.point) || 0,
       image: typeof item.image === "string" ? item.image : "",
+      free: item?.free === true,
     });
   }
   return map;

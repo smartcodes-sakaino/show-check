@@ -305,10 +305,15 @@ export class RoomMonitor implements DurableObject {
 
     const gift = parseGiftEvent(frame.payload as Record<string, unknown>);
     if (!gift) return; // コメント等、ギフト以外は無視
-    if (gift.gt !== 2) return; // 無料ギフトは記録しない（有名配信者だとシートが埋まりすぎるため）
+
+    const master = gift.g !== null ? this.giftCatalog?.get(Number(gift.g)) : undefined;
+    // 無料ギフトは記録しない（有名配信者だとシートが埋まりすぎるため）。
+    // WSイベント側の gt フラグは無料ギフトでも2(有料)になることがあり信用できないため、
+    // ギフトマスタの free フラグで判定する。マスタが取得できていない場合は
+    // 判定できないので記録しておく（取りこぼしを避ける）。
+    if (master?.free === true) return;
 
     const config = await this.getConfig();
-    const master = gift.g !== null ? this.giftCatalog?.get(Number(gift.g)) : undefined;
     const point = master?.point ?? null;
     const totalG = point !== null && gift.n !== null ? point * gift.n : null;
 
