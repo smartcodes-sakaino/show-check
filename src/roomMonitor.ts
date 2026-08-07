@@ -2,9 +2,11 @@ import type { Env, GiftLogEntry, MonitorStatus, RoomConfig, StatusResponse } fro
 import {
   SHOWROOM_WS_URL,
   checkRoomStatus,
+  fetchGiftCatalog,
   parseGiftEvent,
   parseWsFrame,
   resolveRoomId,
+  type GiftMasterEntry,
 } from "./showroom";
 import { appendGiftRow } from "./sheets";
 
@@ -29,6 +31,9 @@ export class RoomMonitor implements DurableObject {
   private ws: WebSocket | null = null;
   private reconnectAttempt = 0;
   private wsGeneration = 0; // 古いWS接続からのイベントを無視するための世代カウンタ
+
+  private giftCatalog: Map<number, GiftMasterEntry> | null = null;
+  private giftCatalogRoomId: string | null = null;
 
   constructor(state: DurableObjectState, env: Env) {
     this.state = state;
@@ -180,6 +185,7 @@ export class RoomMonitor implements DurableObject {
 
       if (roomStatus.isLive && roomStatus.bcsvrKey) {
         await this.setLastError(null);
+        await this.ensureGiftCatalog(config.roomId);
         await this.connectWs(roomStatus.bcsvrKey);
         return; // ライブ中はalarmではなくWSのcloseイベント起点でポーリングに戻す
       }
@@ -190,6 +196,20 @@ export class RoomMonitor implements DurableObject {
       await this.setStatus("error");
       await this.setLastError(String(err?.message ?? err));
       await this.scheduleAlarm(POLL_INTERVAL_MS);
+    }
+  }
+
+  /**
+   * ギフトID→名前/G のマスタデータをキャッシュする。取得に失敗しても監視自体は続行し、
+   * その場合ギフトのG換算値はnullのまま記録される。
+   */
+  private async ensureGiftCatalog(roomId: string): Promise<void> {
+    if (this.giftCatalog && this.giftCatalogRoomId === roomId) return;
+    try {
+      this.giftCatalog = await fetchGiftCatalog(roomId);
+      this.giftCatalogRoomId = roomId;
+    } catch (err: any) {
+      console.error("gift catalog fetch failed", err);
     }
   }
 
@@ -287,6 +307,10 @@ export class RoomMonitor implements DurableObject {
     if (!gift) return; // コメント等、ギフト以外は無視
 
     const config = await this.getConfig();
+    const master = gift.g !== null ? this.giftCatalog?.get(Number(gift.g)) : undefined;
+    const point = master?.point ?? null;
+    const totalG = point !== null && gift.n !== null ? point * gift.n : null;
+
     const entry: GiftLogEntry = {
       receivedAt: new Date().toISOString(),
       sentAt: gift.created_at ? new Date(gift.created_at * 1000).toISOString() : null,
@@ -296,8 +320,11 @@ export class RoomMonitor implements DurableObject {
       userId: gift.u,
       userAttribute: gift.ua,
       giftId: gift.g,
+      giftName: master?.name ?? null,
       num: gift.n,
       giftType: gift.gt,
+      point,
+      totalG,
       sheetSynced: false,
       sheetError: null,
     };

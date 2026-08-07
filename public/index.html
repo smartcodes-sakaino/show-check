@@ -47,6 +47,21 @@
         <ul id="giftList" class="gift-list"></ul>
       </section>
 
+      <section class="card">
+        <h2>履歴・集計</h2>
+        <select id="historyDateSelect">
+          <option value="">日付を選択…</option>
+        </select>
+        <p id="historyError" class="error"></p>
+        <div id="historyResult" class="hidden">
+          <p class="muted">合計: <span id="historyGrandTotal">0</span>G</p>
+          <button id="copyHistoryBtn" class="secondary">コピー用テキストをコピー</button>
+          <p id="copyHistoryStatus" class="muted"></p>
+          <ul id="historyList" class="gift-list"></ul>
+          <textarea id="historyCopyText" class="hidden" readonly></textarea>
+        </div>
+      </section>
+
       <button id="logoutBtn" class="link">合言葉をリセット</button>
     </section>
   </main>

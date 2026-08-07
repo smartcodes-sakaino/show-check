@@ -113,6 +113,41 @@ export async function checkRoomStatus(roomId: string): Promise<RoomStatus> {
   return { isLive, roomId, roomName, bcsvrKey: isLive ? bcsvrKey : null };
 }
 
+export interface GiftMasterEntry {
+  giftId: number;
+  /** ギフト名。このAPIからは英語表記で返ってくる（要検証だが日本語化の方法は未確認） */
+  name: string;
+  /** ギフト1個あたりのG */
+  point: number;
+}
+
+/**
+ * 対象ルームのギフト一覧（マスタデータ）を取得する。
+ * レスポンスは { normal: [...], enquete: [...] } の2配列構成（実データで確認済み）。
+ * enquete は投票イベント等で使われる特殊ギフトで、通常ギフトと同じ形式のため両方まとめて扱う。
+ */
+export async function fetchGiftCatalog(roomId: string): Promise<Map<number, GiftMasterEntry>> {
+  const res = await fetch(
+    `https://www.showroom-live.com/api/live/gift_list?room_id=${encodeURIComponent(roomId)}`,
+    { headers: commonHeaders() },
+  );
+  if (!res.ok) {
+    throw new Error(`ギフトマスタの取得に失敗しました (HTTP ${res.status})`);
+  }
+  const data = (await res.json()) as { normal?: any[]; enquete?: any[] };
+  const map = new Map<number, GiftMasterEntry>();
+  for (const item of [...(data.normal ?? []), ...(data.enquete ?? [])]) {
+    const giftId = Number(item?.gift_id);
+    if (!Number.isFinite(giftId)) continue;
+    map.set(giftId, {
+      giftId,
+      name: typeof item.gift_name === "string" ? item.gift_name : `Gift ${giftId}`,
+      point: Number(item?.point) || 0,
+    });
+  }
+  return map;
+}
+
 export interface GiftEvent {
   ac: string | null; // 送信者ユーザー名
   av: string | number | null; // アバターID

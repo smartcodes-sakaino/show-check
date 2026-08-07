@@ -179,3 +179,47 @@ button:disabled {
 .gift-list .sync-ng {
   color: var(--danger);
 }
+
+select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #11141a;
+  color: var(--text);
+  font-size: 1rem;
+  margin-bottom: 10px;
+}
+
+.history-sender-row {
+  display: flex;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.history-breakdown {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0 0 0 12px;
+  border-left: 2px solid var(--border);
+}
+
+.history-breakdown li {
+  padding: 4px 0;
+  border-bottom: none;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+#historyCopyText {
+  width: 100%;
+  min-height: 120px;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #11141a;
+  color: var(--text);
+  font-family: monospace;
+  font-size: 0.85rem;
+}

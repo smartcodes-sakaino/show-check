@@ -39,10 +39,16 @@ export interface GiftLogEntry {
   userAttribute: number | null;
   /** ギフトID */
   giftId: string | number | null;
+  /** ギフト名（取得できた場合、ギフトマスタ由来。英語表記） */
+  giftName: string | null;
   /** ギフト個数 */
   num: number | null;
   /** 1=無料 2=有料 */
   giftType: number | null;
+  /** ギフト1個あたりのG（ギフトマスタ由来、取得できなければnull） */
+  point: number | null;
+  /** num × point（このギフト送信で発生したG合計） */
+  totalG: number | null;
   /** シートへの書き込みに成功したか */
   sheetSynced: boolean;
   sheetError: string | null;
@@ -55,4 +61,30 @@ export interface StatusResponse {
   lastCheckedAt: string | null;
   lastError: string | null;
   recentGifts: GiftLogEntry[];
+}
+
+export interface HistoryDate {
+  /** JST基準の日付 (YYYY-MM-DD) */
+  date: string;
+  count: number;
+}
+
+export interface HistoryBreakdownItem {
+  giftId: string;
+  giftName: string | null;
+  num: number;
+  totalG: number;
+}
+
+export interface HistorySenderSummary {
+  userId: string;
+  senderName: string;
+  totalG: number;
+  breakdown: HistoryBreakdownItem[];
+}
+
+export interface HistorySummaryResponse {
+  date: string;
+  grandTotalG: number;
+  senders: HistorySenderSummary[];
 }

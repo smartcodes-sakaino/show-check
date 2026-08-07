@@ -1,4 +1,5 @@
 import type { Env } from "./types";
+import { getHistorySummary, listHistoryDates } from "./sheets";
 export { RoomMonitor } from "./roomMonitor";
 
 function timingSafeEqual(a: string, b: string): boolean {
@@ -28,6 +29,26 @@ export default {
     if (url.pathname.startsWith("/api/")) {
       if (!isAuthorized(request, env)) {
         return Response.json({ error: "unauthorized" }, { status: 401 });
+      }
+
+      // 履歴集計はスプレッドシートが正本のデータなので、DOを介さずWorkerから直接読む
+      if (url.pathname === "/api/history/dates") {
+        try {
+          return Response.json(await listHistoryDates(env));
+        } catch (err: any) {
+          return Response.json({ error: String(err?.message ?? err) }, { status: 500 });
+        }
+      }
+      if (url.pathname === "/api/history/summary") {
+        const date = url.searchParams.get("date") ?? "";
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+          return Response.json({ error: "date パラメータ(YYYY-MM-DD)が必要です" }, { status: 400 });
+        }
+        try {
+          return Response.json(await getHistorySummary(env, date));
+        } catch (err: any) {
+          return Response.json({ error: String(err?.message ?? err) }, { status: 500 });
+        }
       }
 
       const stub = getMonitorStub(env);

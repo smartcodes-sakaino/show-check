@@ -20,6 +20,14 @@ const els = {
   refreshBtn: document.getElementById("refreshBtn"),
   giftList: document.getElementById("giftList"),
   logoutBtn: document.getElementById("logoutBtn"),
+  historyDateSelect: document.getElementById("historyDateSelect"),
+  historyError: document.getElementById("historyError"),
+  historyResult: document.getElementById("historyResult"),
+  historyGrandTotal: document.getElementById("historyGrandTotal"),
+  historyList: document.getElementById("historyList"),
+  copyHistoryBtn: document.getElementById("copyHistoryBtn"),
+  copyHistoryStatus: document.getElementById("copyHistoryStatus"),
+  historyCopyText: document.getElementById("historyCopyText"),
 };
 
 function getToken() {
@@ -65,6 +73,7 @@ function showApp() {
   els.login.classList.add("hidden");
   els.app.classList.remove("hidden");
   refreshStatus();
+  loadHistoryDates();
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(refreshStatus, 5000);
 }
@@ -185,6 +194,94 @@ els.saveRoomBtn.addEventListener("click", async () => {
 });
 
 els.refreshBtn.addEventListener("click", refreshStatus);
+
+async function loadHistoryDates() {
+  els.historyError.textContent = "";
+  try {
+    const dates = await api("/history/dates");
+    const current = els.historyDateSelect.value;
+    els.historyDateSelect.innerHTML = '<option value="">日付を選択…</option>';
+    for (const d of dates) {
+      const opt = document.createElement("option");
+      opt.value = d.date;
+      opt.textContent = `${d.date} (${d.count}件)`;
+      els.historyDateSelect.appendChild(opt);
+    }
+    if (current && [...els.historyDateSelect.options].some((o) => o.value === current)) {
+      els.historyDateSelect.value = current;
+    }
+  } catch (err) {
+    els.historyError.textContent = err.message;
+  }
+}
+
+function renderHistorySummary(data) {
+  els.historyGrandTotal.textContent = data.grandTotalG.toLocaleString("ja-JP");
+  els.historyList.innerHTML = "";
+
+  const copyLines = [`${data.date} のギフト集計`, ""];
+
+  if (data.senders.length === 0) {
+    const li = document.createElement("li");
+    li.textContent = "この日のギフトはありません";
+    li.className = "muted";
+    els.historyList.appendChild(li);
+  } else {
+    for (const sender of data.senders) {
+      copyLines.push(`${sender.senderName}: ${sender.totalG.toLocaleString("ja-JP")}G`);
+
+      const li = document.createElement("li");
+      li.className = "history-sender";
+      const row = document.createElement("div");
+      row.className = "gname history-sender-row";
+      row.innerHTML = `<span>${escapeHtml(sender.senderName)}</span><span>${sender.totalG.toLocaleString("ja-JP")}G</span>`;
+
+      const breakdown = document.createElement("ul");
+      breakdown.className = "history-breakdown hidden";
+      for (const item of sender.breakdown) {
+        const bli = document.createElement("li");
+        const name = item.giftName || `ギフト#${item.giftId}`;
+        bli.textContent = `${name} × ${item.num} = ${item.totalG.toLocaleString("ja-JP")}G`;
+        breakdown.appendChild(bli);
+      }
+
+      row.addEventListener("click", () => breakdown.classList.toggle("hidden"));
+      li.appendChild(row);
+      li.appendChild(breakdown);
+      els.historyList.appendChild(li);
+    }
+  }
+
+  copyLines.push("", `合計: ${data.grandTotalG.toLocaleString("ja-JP")}G`);
+  els.historyCopyText.value = copyLines.join("\n");
+  els.historyResult.classList.remove("hidden");
+  els.copyHistoryStatus.textContent = "";
+}
+
+els.historyDateSelect.addEventListener("change", async () => {
+  const date = els.historyDateSelect.value;
+  els.historyError.textContent = "";
+  els.historyResult.classList.add("hidden");
+  if (!date) return;
+  try {
+    const data = await api(`/history/summary?date=${encodeURIComponent(date)}`);
+    renderHistorySummary(data);
+  } catch (err) {
+    els.historyError.textContent = err.message;
+  }
+});
+
+els.copyHistoryBtn.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(els.historyCopyText.value);
+    els.copyHistoryStatus.textContent = "コピーしました";
+  } catch {
+    els.historyCopyText.classList.remove("hidden");
+    els.historyCopyText.focus();
+    els.historyCopyText.select();
+    els.copyHistoryStatus.textContent = "自動コピーできませんでした。選択された内容を手動でコピーしてください";
+  }
+});
 
 if (getToken()) {
   showApp();
