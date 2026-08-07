@@ -1,0 +1,18 @@
+# ローカル開発用のシークレット設定例。
+# コピーして .dev.vars という名前で保存し、値を埋めてください（.dev.vars は git 管理対象外）。
+# 本番(Cloudflare)には `wrangler secret put <NAME>` で個別に設定します。
+
+# 管理画面 / API を保護するための合言葉（自分で決めた任意の文字列でOK）
+ADMIN_TOKEN=change-me-to-a-random-string
+
+# Google サービスアカウントのメールアドレス
+GOOGLE_CLIENT_EMAIL=your-service-account@your-project.iam.gserviceaccount.com
+
+# Google サービスアカウントの秘密鍵（JSONキーの private_key の値をそのまま。改行は \n のままでOK）
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+
+# 書き込み先スプレッドシートのID（URLの /d/ と /edit の間の文字列）
+GOOGLE_SHEET_ID=your-spreadsheet-id
+
+# 書き込み先シート名（省略時は "Sheet1"）
+GOOGLE_SHEET_NAME=Sheet1

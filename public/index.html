@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>show-check</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main class="wrap">
+    <h1>show-check</h1>
+    <p class="sub">SHOWROOM ギフト自動起票ツール</p>
+
+    <section id="login" class="card">
+      <h2>合言葉を入力</h2>
+      <input id="tokenInput" type="password" placeholder="ADMIN_TOKEN" autocomplete="off" />
+      <button id="loginBtn">ログイン</button>
+      <p id="loginError" class="error"></p>
+    </section>
+
+    <section id="app" class="hidden">
+      <section class="card">
+        <h2>状態</h2>
+        <div class="status-row">
+          <span id="statusBadge" class="badge">-</span>
+          <span id="monitoringBadge" class="badge">-</span>
+        </div>
+        <p>対象ルーム: <span id="roomLabel">未設定</span></p>
+        <p class="muted">最終チェック: <span id="lastChecked">-</span></p>
+        <p id="lastError" class="error"></p>
+        <div class="btn-row">
+          <button id="startBtn">監視を開始</button>
+          <button id="stopBtn" class="secondary">監視を停止</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>監視対象ルームの設定</h2>
+        <input id="roomInput" type="text" placeholder="ルームURL または room_id" />
+        <button id="saveRoomBtn">保存</button>
+        <p id="roomError" class="error"></p>
+      </section>
+
+      <section class="card">
+        <h2>直近のギフトログ</h2>
+        <button id="refreshBtn" class="secondary">更新</button>
+        <ul id="giftList" class="gift-list"></ul>
+      </section>
+
+      <button id="logoutBtn" class="link">合言葉をリセット</button>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

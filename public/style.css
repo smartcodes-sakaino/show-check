@@ -1,0 +1,181 @@
+:root {
+  color-scheme: light dark;
+  --bg: #0f1115;
+  --card: #1a1d24;
+  --border: #2a2e37;
+  --text: #e8e9ec;
+  --muted: #9aa0ac;
+  --accent: #5b8def;
+  --danger: #e5534b;
+  --ok: #3fb950;
+  --warn: #d29922;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.wrap {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 16px 16px 48px;
+}
+
+h1 {
+  font-size: 1.4rem;
+  margin: 12px 0 0;
+}
+
+.sub {
+  color: var(--muted);
+  margin: 4px 0 20px;
+  font-size: 0.9rem;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.card h2 {
+  font-size: 1rem;
+  margin: 0 0 12px;
+}
+
+input[type="text"],
+input[type="password"] {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #11141a;
+  color: var(--text);
+  font-size: 1rem;
+  margin-bottom: 10px;
+}
+
+button {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: white;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+button.secondary {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+button.link {
+  background: none;
+  color: var(--muted);
+  text-decoration: underline;
+  padding: 4px 0;
+  font-size: 0.85rem;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.btn-row button {
+  flex: 1;
+}
+
+.status-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  background: var(--border);
+}
+
+.badge.live {
+  background: var(--ok);
+  color: #06240f;
+}
+
+.badge.polling {
+  background: var(--warn);
+  color: #2b1d00;
+}
+
+.badge.error {
+  background: var(--danger);
+  color: white;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.error {
+  color: var(--danger);
+  font-size: 0.85rem;
+  min-height: 1.1em;
+  margin: 6px 0 0;
+  word-break: break-word;
+}
+
+.hidden {
+  display: none;
+}
+
+.gift-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.gift-list li {
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.gift-list li:last-child {
+  border-bottom: none;
+}
+
+.gift-list .gname {
+  font-weight: 600;
+}
+
+.gift-list .gmeta {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.gift-list .sync-ng {
+  color: var(--danger);
+}

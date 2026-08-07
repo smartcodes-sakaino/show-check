@@ -1,0 +1,20 @@
+{
+  "name": "show-check",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SHOWROOM ギフト自動起票ツール (個人利用)",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "jose": "^5.9.6"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260801.1",
+    "typescript": "^5.7.2",
+    "wrangler": "^4.119.0"
+  }
+}
