@@ -108,11 +108,20 @@ function renderStatus(data) {
   } else {
     for (const g of data.recentGifts) {
       const li = document.createElement("li");
+      li.className = "gift-log-item";
       const time = new Date(g.receivedAt).toLocaleTimeString("ja-JP");
       const syncLabel = g.sheetSynced ? "シート反映済" : g.sheetError ? "シート反映失敗" : "反映中";
+      const totalGLabel = g.totalG != null ? `${g.totalG.toLocaleString("ja-JP")}G` : "?G";
+      const giftLabel = g.giftName || `ギフト#${g.giftId ?? "-"}`;
+      const img = g.giftImage
+        ? `<img src="${escapeHtml(g.giftImage)}" alt="" class="gift-thumb" />`
+        : `<div class="gift-thumb gift-thumb-empty"></div>`;
       li.innerHTML = `
-        <div class="gname">${escapeHtml(g.senderName || "不明")} が ギフト#${escapeHtml(String(g.giftId ?? "-"))} × ${escapeHtml(String(g.num ?? "-"))}</div>
-        <div class="gmeta">${time} / ${g.giftType === 2 ? "有料" : "無料"} / <span class="${g.sheetError ? "sync-ng" : ""}">${syncLabel}</span></div>
+        ${img}
+        <div class="gift-log-body">
+          <div class="gname">${escapeHtml(g.senderName || "不明")} が ${totalGLabel}</div>
+          <div class="gmeta">${escapeHtml(giftLabel)} × ${escapeHtml(String(g.num ?? "-"))} ・ ${time} ・ <span class="${g.sheetError ? "sync-ng" : ""}">${syncLabel}</span></div>
+        </div>
       `;
       els.giftList.appendChild(li);
     }

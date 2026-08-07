@@ -180,6 +180,29 @@ button:disabled {
   color: var(--danger);
 }
 
+.gift-log-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gift-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  flex-shrink: 0;
+  background: #11141a;
+  border-radius: 6px;
+}
+
+.gift-thumb-empty {
+  border: 1px dashed var(--border);
+}
+
+.gift-log-body {
+  min-width: 0;
+}
+
 select {
   width: 100%;
   padding: 10px 12px;

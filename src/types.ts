@@ -41,6 +41,8 @@ export interface GiftLogEntry {
   giftId: string | number | null;
   /** ギフト名（取得できた場合、ギフトマスタ由来。英語表記） */
   giftName: string | null;
+  /** ギフト画像URL（ギフトマスタ由来） */
+  giftImage: string | null;
   /** ギフト個数 */
   num: number | null;
   /** 1=無料 2=有料 */

@@ -119,6 +119,8 @@ export interface GiftMasterEntry {
   name: string;
   /** ギフト1個あたりのG */
   point: number;
+  /** ギフト画像URL */
+  image: string;
 }
 
 /**
@@ -143,6 +145,7 @@ export async function fetchGiftCatalog(roomId: string): Promise<Map<number, Gift
       giftId,
       name: typeof item.gift_name === "string" ? item.gift_name : `Gift ${giftId}`,
       point: Number(item?.point) || 0,
+      image: typeof item.image === "string" ? item.image : "",
     });
   }
   return map;
@@ -196,4 +199,7 @@ export function parseWsFrame(raw: string): { type: string; key: string | null; p
   return { type, key: null, payload: null };
 }
 
-export const SHOWROOM_WS_URL = "wss://online.showroom-live.com/";
+// Cloudflare Workers の outbound WebSocket は fetch() + Upgrade ヘッダーで確立するため、
+// スキームは wss:// ではなく https:// を指定する（wss://を渡すと
+// 「Fetch API cannot load」エラーになる。ローカル/本番どちらでも同じ挙動）。
+export const SHOWROOM_WS_URL = "https://online.showroom-live.com/";

@@ -305,6 +305,7 @@ export class RoomMonitor implements DurableObject {
 
     const gift = parseGiftEvent(frame.payload as Record<string, unknown>);
     if (!gift) return; // コメント等、ギフト以外は無視
+    if (gift.gt !== 2) return; // 無料ギフトは記録しない（有名配信者だとシートが埋まりすぎるため）
 
     const config = await this.getConfig();
     const master = gift.g !== null ? this.giftCatalog?.get(Number(gift.g)) : undefined;
@@ -321,6 +322,7 @@ export class RoomMonitor implements DurableObject {
       userAttribute: gift.ua,
       giftId: gift.g,
       giftName: master?.name ?? null,
+      giftImage: master?.image || null,
       num: gift.n,
       giftType: gift.gt,
       point,
