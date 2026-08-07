@@ -18,6 +18,7 @@ const els = {
   saveRoomBtn: document.getElementById("saveRoomBtn"),
   roomError: document.getElementById("roomError"),
   refreshBtn: document.getElementById("refreshBtn"),
+  clearGiftLogBtn: document.getElementById("clearGiftLogBtn"),
   giftList: document.getElementById("giftList"),
   logoutBtn: document.getElementById("logoutBtn"),
   historyDateSelect: document.getElementById("historyDateSelect"),
@@ -203,6 +204,15 @@ els.saveRoomBtn.addEventListener("click", async () => {
 });
 
 els.refreshBtn.addEventListener("click", refreshStatus);
+
+els.clearGiftLogBtn.addEventListener("click", async () => {
+  try {
+    const data = await api("/gifts/clear", { method: "POST" });
+    renderStatus(data);
+  } catch (err) {
+    els.lastError.textContent = err.message;
+  }
+});
 
 async function loadHistoryDates() {
   els.historyError.textContent = "";

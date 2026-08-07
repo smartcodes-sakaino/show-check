@@ -55,6 +55,10 @@ export class RoomMonitor implements DurableObject {
         case "/monitor/stop":
           if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
           return Response.json(await this.stopMonitoring());
+        case "/gifts/clear":
+          if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
+          await this.state.storage.put(STORAGE_KEYS.giftLog, []);
+          return Response.json(await this.getStatusResponse());
         default:
           return new Response("Not Found", { status: 404 });
       }
@@ -149,6 +153,7 @@ export class RoomMonitor implements DurableObject {
     if (!config.roomId) throw new Error("先に監視対象のルームを設定してください");
 
     await this.state.storage.put(STORAGE_KEYS.monitoring, true);
+    await this.state.storage.put(STORAGE_KEYS.giftLog, []);
     await this.setStatus("polling");
     await this.setLastError(null);
     await this.scheduleAlarm(0);
