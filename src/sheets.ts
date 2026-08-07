@@ -60,17 +60,8 @@ function sheetsRange(env: Env): string {
   return `${sheetName}!A:I`;
 }
 
-/**
- * シート列: 受信日時 / ルーム / 送信者 / ユーザー種別 / ギフト名 / ギフトID / 個数 / G(合計) / 無料・有料
- * valueInputOption=RAW で書き込む（USER_ENTEREDだとSheetsが日時文字列を日付型として
- * 自動変換し、タイムゾーン・表示形式に依存して読み戻しが不安定になるため、
- * 文字列はそのままテキストとして保存する）。
- */
-export async function appendGiftRow(env: Env, entry: GiftLogEntry): Promise<void> {
-  const accessToken = await getAccessToken(env);
-  const range = sheetsRange(env);
-
-  const row = [
+function buildRow(entry: GiftLogEntry): (string | number)[] {
+  return [
     entry.sentAt ?? entry.receivedAt,
     entry.roomName ?? entry.roomId ?? "",
     entry.senderName ?? "",
@@ -81,6 +72,24 @@ export async function appendGiftRow(env: Env, entry: GiftLogEntry): Promise<void
     entry.totalG ?? 0,
     giftTypeLabel(entry.giftType),
   ];
+}
+
+/**
+ * シート列: 受信日時 / ルーム / 送信者 / ユーザー種別 / ギフト名 / ギフトID / 個数 / G(合計) / 無料・有料
+ * valueInputOption=RAW で書き込む（USER_ENTEREDだとSheetsが日時文字列を日付型として
+ * 自動変換し、タイムゾーン・表示形式に依存して読み戻しが不安定になるため、
+ * 文字列はそのままテキストとして保存する）。
+ *
+ * 複数件をまとめて1回のリクエストで追記する。Sheets APIのクォータは
+ * リクエスト回数ベース（デフォルトはユーザーあたり毎分60件程度）なので、
+ * ギフトが連続で飛んできても1件ずつ書き込まずまとめて送ることでクォータ消費を抑える。
+ */
+export async function appendGiftRows(env: Env, entries: GiftLogEntry[]): Promise<void> {
+  if (entries.length === 0) return;
+
+  const accessToken = await getAccessToken(env);
+  const range = sheetsRange(env);
+  const values = entries.map(buildRow);
 
   const res = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${env.GOOGLE_SHEET_ID}/values/${encodeURIComponent(range)}:append?valueInputOption=RAW`,
@@ -90,7 +99,7 @@ export async function appendGiftRow(env: Env, entry: GiftLogEntry): Promise<void
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ values: [row] }),
+      body: JSON.stringify({ values }),
     },
   );
 

@@ -8,12 +8,13 @@ import {
   resolveRoomId,
   type GiftMasterEntry,
 } from "./showroom";
-import { appendGiftRow } from "./sheets";
+import { appendGiftRows } from "./sheets";
 
 const POLL_INTERVAL_MS = 45_000; // 未配信中のポーリング間隔（数十秒〜1分の想定内）
 const LIVE_SAFETY_CHECK_MS = 5 * 60_000; // WS接続中でも念のため生存確認する間隔
 const MAX_GIFT_LOG = 50;
 const RECONNECT_DELAYS_MS = [2_000, 5_000, 10_000, 20_000, 30_000];
+const FLUSH_INTERVAL_MS = 1_000; // シート書き込みをまとめる間隔（Sheets APIのクォータ対策）
 
 const STORAGE_KEYS = {
   config: "config",
@@ -22,6 +23,7 @@ const STORAGE_KEYS = {
   lastError: "lastError",
   lastCheckedAt: "lastCheckedAt",
   giftLog: "giftLog",
+  pendingWrites: "pendingWrites",
 } as const;
 
 export class RoomMonitor implements DurableObject {
@@ -35,9 +37,17 @@ export class RoomMonitor implements DurableObject {
   private giftCatalog: Map<number, GiftMasterEntry> | null = null;
   private giftCatalogRoomId: string | null = null;
 
+  // シートへの書き込み待ちキュー。1件ずつ即書き込みせず、まとめて1回のAPI呼び出しで送る。
+  private pendingWrites: GiftLogEntry[] = [];
+  private flushTimer: ReturnType<typeof setInterval> | null = null;
+
   constructor(state: DurableObjectState, env: Env) {
     this.state = state;
     this.env = env;
+    // DOが再起動した場合に備えて、書き込み待ちキューを復元する
+    this.state.blockConcurrencyWhile(async () => {
+      this.pendingWrites = (await this.state.storage.get<GiftLogEntry[]>(STORAGE_KEYS.pendingWrites)) ?? [];
+    });
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -173,6 +183,9 @@ export class RoomMonitor implements DurableObject {
   }
 
   private async pollOnce(): Promise<void> {
+    // ライブ中でなくても、前回の未送信キューが残っていれば送っておく（安全網）
+    this.flushPendingWrites().catch((err) => console.error("flush error", err));
+
     const config = await this.getConfig();
     if (!config.roomId) {
       await this.setStatus("idle");
@@ -250,6 +263,7 @@ export class RoomMonitor implements DurableObject {
       ws.send(`SUB\t${bcsvrKey}`);
       await this.setStatus("live");
       await this.scheduleAlarm(LIVE_SAFETY_CHECK_MS);
+      this.startFlushTimer();
     } catch (err: any) {
       await this.setStatus("error");
       await this.setLastError(String(err?.message ?? err));
@@ -266,6 +280,23 @@ export class RoomMonitor implements DurableObject {
         // ignore
       }
       this.ws = null;
+    }
+    this.stopFlushTimer();
+    // 接続が切れる際、たまっている分を最後に送っておく
+    this.flushPendingWrites().catch((err) => console.error("flush error", err));
+  }
+
+  private startFlushTimer(): void {
+    if (this.flushTimer) return;
+    this.flushTimer = setInterval(() => {
+      this.flushPendingWrites().catch((err) => console.error("flush error", err));
+    }, FLUSH_INTERVAL_MS);
+  }
+
+  private stopFlushTimer(): void {
+    if (this.flushTimer) {
+      clearInterval(this.flushTimer);
+      this.flushTimer = null;
     }
   }
 
@@ -343,15 +374,39 @@ export class RoomMonitor implements DurableObject {
 
     await this.pushGiftLog(entry);
 
+    // 即書き込みせずキューに積む。flushPendingWrites がまとめて送る。
+    this.pendingWrites.push(entry);
+    await this.state.storage.put(STORAGE_KEYS.pendingWrites, this.pendingWrites);
+  }
+
+  /**
+   * キューにたまったギフトをまとめて1回のAPI呼び出しでシートに書き込む。
+   * 呼び出し中に新しく積まれた分は次回のflushで処理されるよう、
+   * 呼び出し開始時点でキューを退避してから空にする。
+   */
+  private async flushPendingWrites(): Promise<void> {
+    if (this.pendingWrites.length === 0) return;
+
+    const batch = this.pendingWrites;
+    this.pendingWrites = [];
+    await this.state.storage.put(STORAGE_KEYS.pendingWrites, this.pendingWrites);
+
     try {
-      await appendGiftRow(this.env, entry);
-      entry.sheetSynced = true;
-      await this.updateLastGiftLogEntry(entry);
+      await appendGiftRows(this.env, batch);
+      for (const entry of batch) {
+        entry.sheetSynced = true;
+        entry.sheetError = null;
+      }
     } catch (err: any) {
-      entry.sheetError = String(err?.message ?? err);
-      await this.updateLastGiftLogEntry(entry);
-      await this.setLastError(`スプレッドシート書き込み失敗: ${entry.sheetError}`);
+      const message = String(err?.message ?? err);
+      for (const entry of batch) entry.sheetError = message;
+      await this.setLastError(`スプレッドシート書き込み失敗: ${message}`);
+      // 失敗分は次回のflushで再送を試みる
+      this.pendingWrites = [...batch, ...this.pendingWrites];
+      await this.state.storage.put(STORAGE_KEYS.pendingWrites, this.pendingWrites);
     }
+
+    await this.updateGiftLogEntries(batch);
   }
 
   private async pushGiftLog(entry: GiftLogEntry): Promise<void> {
@@ -361,11 +416,18 @@ export class RoomMonitor implements DurableObject {
     await this.state.storage.put(STORAGE_KEYS.giftLog, log);
   }
 
-  private async updateLastGiftLogEntry(entry: GiftLogEntry): Promise<void> {
+  /** バッチ書き込み後、対応する直近ログの反映状況(sheetSynced/sheetError)を更新する */
+  private async updateGiftLogEntries(batch: GiftLogEntry[]): Promise<void> {
     const log = (await this.state.storage.get<GiftLogEntry[]>(STORAGE_KEYS.giftLog)) ?? [];
-    if (log.length > 0 && log[0].receivedAt === entry.receivedAt) {
-      log[0] = entry;
-      await this.state.storage.put(STORAGE_KEYS.giftLog, log);
+    const byReceivedAt = new Map(batch.map((entry) => [entry.receivedAt, entry]));
+    let changed = false;
+    for (let i = 0; i < log.length; i++) {
+      const updated = byReceivedAt.get(log[i].receivedAt);
+      if (updated) {
+        log[i] = updated;
+        changed = true;
+      }
     }
+    if (changed) await this.state.storage.put(STORAGE_KEYS.giftLog, log);
   }
 }
