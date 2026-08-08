@@ -16,6 +16,10 @@ const MAX_GIFT_LOG = 50;
 const RECONNECT_DELAYS_MS = [2_000, 5_000, 10_000, 20_000, 30_000];
 const FLUSH_INTERVAL_MS = 1_000; // シート書き込みをまとめる間隔（Sheets APIのクォータ対策）
 
+// マスタ上は free:true（無料ギフト）扱いだが、例外的に有料として記録したいギフトID。
+// 1601 = RainbowStar（1個100G相当としてカウントする）
+const FORCE_PAID_GIFT_IDS = new Set<number>([1601]);
+
 const STORAGE_KEYS = {
   config: "config",
   status: "status",
@@ -342,12 +346,15 @@ export class RoomMonitor implements DurableObject {
     const gift = parseGiftEvent(frame.payload as Record<string, unknown>);
     if (!gift) return; // コメント等、ギフト以外は無視
 
-    const master = gift.g !== null ? this.giftCatalog?.get(Number(gift.g)) : undefined;
+    const giftId = gift.g !== null ? Number(gift.g) : null;
+    const master = giftId !== null ? this.giftCatalog?.get(giftId) : undefined;
     // 無料ギフトは記録しない（有名配信者だとシートが埋まりすぎるため）。
     // WSイベント側の gt フラグは無料ギフトでも2(有料)になることがあり信用できないため、
     // ギフトマスタの free フラグで判定する。マスタが取得できていない場合は
     // 判定できないので記録しておく（取りこぼしを避ける）。
-    if (master?.free === true) return;
+    // ただし FORCE_PAID_GIFT_IDS に含まれるものは例外的に記録する。
+    const forcePaid = giftId !== null && FORCE_PAID_GIFT_IDS.has(giftId);
+    if (master?.free === true && !forcePaid) return;
 
     const config = await this.getConfig();
     const point = master?.point ?? null;
