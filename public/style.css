@@ -157,6 +157,10 @@ button:disabled {
   overflow-y: auto;
 }
 
+#historyList {
+  max-height: 800px;
+}
+
 .gift-list li {
   padding: 10px;
   border-bottom: 1px solid var(--border);

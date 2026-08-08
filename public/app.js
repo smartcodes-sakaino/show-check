@@ -14,6 +14,7 @@ const els = {
   lastError: document.getElementById("lastError"),
   startBtn: document.getElementById("startBtn"),
   stopBtn: document.getElementById("stopBtn"),
+  roomPresetSelect: document.getElementById("roomPresetSelect"),
   roomInput: document.getElementById("roomInput"),
   saveRoomBtn: document.getElementById("saveRoomBtn"),
   roomError: document.getElementById("roomError"),
@@ -186,6 +187,14 @@ els.stopBtn.addEventListener("click", async () => {
   } catch (err) {
     els.lastError.textContent = err.message;
   }
+});
+
+els.roomPresetSelect.addEventListener("change", () => {
+  const url = els.roomPresetSelect.value;
+  if (url) {
+    els.roomInput.value = url;
+  }
+  els.roomPresetSelect.value = "";
 });
 
 els.saveRoomBtn.addEventListener("click", async () => {
